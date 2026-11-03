@@ -1,6 +1,6 @@
 {
   "name": "loop-status",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run an agent build loop and watch it: a local status page per issue with its timeline, agent runs, costs and build logs. A template shows the files your loop writes. No runtime dependencies.",
   "repository": {
     "type": "git",
