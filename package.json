@@ -1,0 +1,42 @@
+{
+  "name": "loop-status",
+  "version": "0.1.0",
+  "description": "Run an agent build loop and watch it: a local status page per issue with its timeline, agent runs, costs and build logs. A template shows the files your loop writes. No runtime dependencies.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MellowStar/loop-status.git"
+  },
+  "homepage": "https://github.com/MellowStar/loop-status#readme",
+  "bugs": {
+    "url": "https://github.com/MellowStar/loop-status/issues"
+  },
+  "type": "module",
+  "bin": {
+    "loop-status": "bin/loop-status.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "web/",
+    "schema/",
+    "template/",
+    "AGENTS.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test 'test/unit/*.test.mjs'"
+  },
+  "keywords": [
+    "agents",
+    "build-loop",
+    "claude",
+    "status-page",
+    "ci",
+    "logs",
+    "local"
+  ],
+  "license": "MIT"
+}

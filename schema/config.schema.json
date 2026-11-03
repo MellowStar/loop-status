@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MellowStar/loop-status/schema/config.schema.json",
+  "title": "loop-status config",
+  "description": "loop-status.config.json. Paths are relative to the directory you run loop-status from (the repo root).",
+  "type": "object",
+  "required": ["name", "loop"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "minLength": 1, "description": "Shown as the page title." },
+    "port": { "type": "integer", "minimum": 1024, "maximum": 65535, "default": 18092 },
+    "logsDir": { "type": "string", "default": ".build-logs" },
+    "statusDir": { "type": "string", "description": "Default: <logsDir>/status." },
+    "loop": {
+      "type": "object",
+      "required": ["script"],
+      "properties": {
+        "script": { "type": "string", "minLength": 1, "description": "The build loop that `loop-status run` starts." },
+        "args": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "interpreter": { "type": "string", "description": "Default: bash for .sh, node for .mjs/.js, else run directly." }
+      },
+      "additionalProperties": false
+    },
+    "states": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "label": { "type": "string" },
+          "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+          "done": { "type": "boolean", "description": "Finished states sort below open ones." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "maxRuns": { "type": "integer", "minimum": 1, "default": 2 },
+    "links": {
+      "type": "object",
+      "properties": {
+        "issue": { "type": "string", "pattern": "^https?://", "description": "URL with {n}." },
+        "pr": { "type": "string", "pattern": "^https?://", "description": "URL with {pr}." }
+      },
+      "additionalProperties": false
+    },
+    "logKinds": {
+      "type": "array",
+      "description": "First match wins. claude-json: a `claude -p --output-format json` result. text: tailed.",
+      "items": {
+        "type": "object",
+        "required": ["glob", "kind"],
+        "properties": {
+          "glob": { "type": "string" },
+          "kind": { "enum": ["claude-json", "text"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "issueLogPattern": {
+      "type": "string",
+      "default": "^{n}-",
+      "description": "Regex, {n} = issue number. In a shared logs folder an issue shows files matching it plus files with no number prefix."
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "light": { "$ref": "#/$defs/tokens" },
+        "dark": { "$ref": "#/$defs/tokens" },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "display": { "type": "string" },
+            "body": { "type": "string" },
+            "mono": { "type": "string" },
+            "stylesheet": { "type": "string", "pattern": "^https://fonts\\.googleapis\\.com/" }
+          },
+          "additionalProperties": false
+        },
+        "radius": {
+          "type": "object",
+          "properties": {
+            "card": { "type": "integer", "minimum": 0 },
+            "button": { "type": "integer", "minimum": 0 },
+            "input": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "designDoc": { "type": "string", "description": "Where the theme came from; for agents only." }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "tokens": {
+      "type": "object",
+      "propertyNames": {
+        "enum": ["bg", "surface", "sunken", "border", "text", "muted", "accent", "accentSoft", "spark", "sparkSoft", "error"]
+      },
+      "additionalProperties": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+    }
+  }
+}

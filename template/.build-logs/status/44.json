@@ -1,0 +1,37 @@
+{
+  "issue": 44,
+  "state": "blocked",
+  "title": "Demo issue 44",
+  "branch": "agent/loop/bundle-44-45",
+  "logs": "bundle-44-45",
+  "step": "stopped",
+  "bundle": [
+    44,
+    45
+  ],
+  "started": "2026-11-03T07:32:27.220Z",
+  "updated": "2026-11-03T07:32:28.137Z",
+  "history": [
+    {
+      "at": "2026-11-03T07:32:27.220Z",
+      "step": "claimed",
+      "state": "queued"
+    },
+    {
+      "at": "2026-11-03T07:32:27.338Z",
+      "step": "build run 1",
+      "state": "working"
+    },
+    {
+      "at": "2026-11-03T07:32:28.137Z",
+      "step": "stopped",
+      "state": "blocked",
+      "message": "#45 did not finish in 2 runs"
+    }
+  ],
+  "run": 1,
+  "agent": "builder",
+  "turns": 12,
+  "cost": 0.42,
+  "message": "#45 did not finish in 2 runs"
+}

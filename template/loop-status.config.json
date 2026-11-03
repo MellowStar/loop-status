@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MellowStar/loop-status/main/schema/config.schema.json",
+  "name": "My project",
+  "port": 18092,
+  "logsDir": ".build-logs",
+  "loop": { "script": "build-loop.sh", "args": [] },
+  "maxRuns": 2,
+  "links": {
+    "issue": "https://github.com/OWNER/REPO/issues/{n}",
+    "pr": "https://github.com/OWNER/REPO/pull/{pr}"
+  },
+  "states": [
+    { "id": "queued", "label": "Queued", "color": "#6B7A86" },
+    { "id": "working", "label": "Working", "color": "#2F6FEB" },
+    { "id": "in-review", "label": "In review", "color": "#6B7A86" },
+    { "id": "needs-you", "label": "Needs you", "color": "#B7791F" },
+    { "id": "blocked", "label": "Blocked", "color": "#C2453A" },
+    { "id": "merged", "label": "Merged", "color": "#1C8A4E", "done": true }
+  ],
+  "logKinds": [
+    { "glob": "*.json", "kind": "claude-json" },
+    { "glob": "*", "kind": "text" }
+  ],
+  "issueLogPattern": "^{n}-",
+  "theme": {
+    "light": {
+      "bg": "#F4F5F7", "surface": "#FFFFFF", "sunken": "#ECEEF1", "border": "#D9DDE3", "text": "#1A1F26",
+      "muted": "#5F6B78", "accent": "#2F6FEB", "accentSoft": "#DCE7FD", "spark": "#E39B2D", "sparkSoft": "#FCEBCF",
+      "error": "#C2453A"
+    },
+    "dark": {
+      "bg": "#111418", "surface": "#191D23", "sunken": "#13161B", "border": "#2B313A", "text": "#E6E9EE",
+      "muted": "#98A2AF", "accent": "#6E9BF5", "accentSoft": "#1D2A44", "spark": "#F0B45A", "sparkSoft": "#3A2C14",
+      "error": "#E06A5F"
+    },
+    "fonts": { "display": "system-ui, sans-serif", "body": "system-ui, sans-serif" },
+    "radius": { "card": 12, "button": 8, "input": 8 }
+  }
+}

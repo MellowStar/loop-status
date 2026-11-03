@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Build loop</title>
+<style>
+/* Theme tokens are filled from the config at load (see applyTheme); these are only the fallbacks. */
+:root{--bg:#F4F5F7;--surface:#fff;--sunken:#ECEEF1;--border:#D9DDE3;--text:#1A1F26;--muted:#5F6B78;--accent:#2F6FEB;
+--accent-soft:#DCE7FD;--spark:#E39B2D;--spark-soft:#FCEBCF;--error:#C2453A;--on-accent:#fff;
+--display:system-ui,sans-serif;--body:system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace;--r-card:12px;--r-btn:8px;--r-input:8px}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--accent)}
+.app{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:340px 1fr;gap:20px;padding:20px 16px;min-height:100vh}
+.rail,.main{min-width:0}
+h1,h2,.big{font-family:var(--display);font-weight:800;letter-spacing:-.02em;margin:0}
+h1{font-size:24px}
+h2{font-size:18px}
+.label{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:18px}
+.stack>*+*{margin-top:14px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.spacer{flex:1}
+
+/* loop strip */
+.strip{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.strip .what{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:700;font-size:13px}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:12px 10px}
+.tile .big{font-size:26px;line-height:1.1}
+.tile.first{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tile.first .label{color:var(--on-accent);opacity:.85}
+
+/* chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--border);background:transparent;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
+.chip[aria-pressed=true]{background:var(--text);border-color:var(--text);color:var(--bg)}
+.chip .n{opacity:.65;margin-left:4px}
+
+/* issue list */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);
+border-radius:var(--r-card);padding:12px 14px;position:relative}
+.item:hover{border-color:var(--muted)}
+.item[aria-current=true]{border-color:var(--accent)}
+.item[aria-current=true]::before{content:"";position:absolute;left:-1px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+.item .body{flex:1;min-width:0}
+.item .t{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .m{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.num{font-family:var(--display);font-weight:800;color:var(--spark)}
+
+/* pills, badges, ring */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:2px 9px 2px 7px;border-radius:999px;
+background:var(--sunken);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor;display:block}
+.badge{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.badge.stale{background:var(--spark-soft);color:var(--text)}
+.ring{--p:0;width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
+background:conic-gradient(var(--accent) calc(var(--p)*1turn),var(--sunken) 0)}
+.ring span{width:26px;height:26px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-size:11px;font-weight:700}
+.ring.lg{width:84px;height:84px}
+.ring.lg span{width:68px;height:68px;font-family:var(--display);font-size:20px;font-weight:800}
+
+/* issue page */
+.head{display:flex;gap:18px;align-items:flex-start}
+.head .who{flex:1;min-width:0}
+.head h1{font-size:30px;line-height:1.15;overflow-wrap:anywhere}
+.facts{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:14px}
+.facts>div{display:flex;flex-direction:column}
+.facts .v{font-weight:600;overflow-wrap:anywhere}
+.note{border-radius:var(--r-card);padding:12px 14px;background:var(--spark-soft);white-space:pre-wrap;overflow-wrap:anywhere}
+.note.err{background:color-mix(in srgb,var(--error) 14%,var(--surface))}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--border);margin:4px 0 0}
+.tab{background:none;border:0;padding:10px 0;font-weight:700;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.tab[aria-selected=true]{color:var(--text);border-color:var(--spark)}
+.tab .n{font-size:11px;background:var(--sunken);border-radius:999px;padding:1px 7px;margin-left:6px;color:var(--muted)}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:86px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--border)}
+.tl li:first-child{border-top:0}
+.tl .when{font-size:13px;color:var(--muted)}
+.tl .msg{font-size:13px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.logs{width:100%;border-collapse:collapse;font-size:14px}
+.logrow{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;width:100%;text-align:left;background:none;
+border:0;border-top:1px solid var(--border);padding:10px 2px}
+.logrow:first-child{border-top:0}
+.logrow:hover .ln{color:var(--accent)}
+.logrow[aria-expanded=true] .ln{color:var(--accent)}
+.ln{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ok{color:#1C8A4E}.bad{color:var(--error)}
+.viewer{margin:6px 0 12px;border:1px solid var(--border);border-radius:var(--r-input);background:var(--sunken)}
+.viewer .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.viewer pre{margin:0;padding:12px;max-height:60vh;overflow:auto;font:12.5px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:var(--r-btn);padding:4px 10px;font-size:13px;font-weight:600}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.empty{border:1.5px dashed var(--border);border-radius:var(--r-card);padding:22px 18px;text-align:center}
+.empty b{display:block;margin-bottom:4px}
+code{font:13px var(--mono);background:var(--sunken);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+.back{display:none}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;
+border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.err-banner{background:color-mix(in srgb,var(--error) 14%,var(--surface));border:1px solid var(--error);border-radius:var(--r-card);padding:10px 14px;font-size:14px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@media (max-width:859px){
+  .app{grid-template-columns:1fr}
+  .app.detail .rail{display:none}
+  .app:not(.detail) .main{display:none}
+  .back{display:inline-block;margin-bottom:12px}
+  .head h1{font-size:24px}
+  .ring.lg{display:none}
+  .logrow{grid-template-columns:1fr auto}
+  .logrow .hide-sm{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style id="theme"></style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="rail stack" id="rail"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+// Every value from the API (titles, steps, messages, logs, reviews) is untrusted: it only ever reaches the page as
+// text through h() / textContent, never as markup (test/unit/server.test.mjs bans the HTML-parsing APIs).
+const POLL_MS = 5000, STALE_MS = 30 * 60 * 1000;
+const S = { cfg: null, issues: [], loop: null, detail: null, filter: 'all', tab: 'timeline', open: null, log: null, showAll: false, error: '' };
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === undefined || v === null) continue;
+    if (k.startsWith('aria-')) { el.setAttribute(k, String(v)); continue; }
+    if (v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'style') for (const [p, sv] of Object.entries(v)) el.style.setProperty(p, sv);
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const c of kids.flat(Infinity)) if (c !== undefined && c !== null && c !== false) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+const $ = (id) => document.getElementById(id);
+const fill = (el, ...kids) => el.replaceChildren(...kids.flat(Infinity).filter((k) => k !== null && k !== undefined && k !== false));
+
+async function get(path) {
+  const r = await fetch(path, { cache: 'no-store' });
+  if (!r.ok) throw Object.assign(new Error(`${path}: ${r.status}`), { status: r.status });
+  return r.json();
+}
+
+// ---- theme ----------------------------------------------------------------------------------------------------
+const HEX = /^#[0-9a-f]{6}$/i, FONT = /^[\w\s,'"-]+$/;
+const VARS = { bg: '--bg', surface: '--surface', sunken: '--sunken', border: '--border', text: '--text', muted: '--muted',
+  accent: '--accent', accentSoft: '--accent-soft', spark: '--spark', sparkSoft: '--spark-soft', error: '--error' };
+const lum = (hex) => { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+function tokens(t) {
+  const out = [];
+  for (const [k, v] of Object.entries(t || {})) if (VARS[k] && HEX.test(v)) out.push(`${VARS[k]}:${v}`);
+  if (HEX.test(t?.accent || '')) out.push(`--on-accent:${lum(t.accent) > .4 ? '#111' : '#fff'}`);
+  return out.join(';');
+}
+function applyTheme(theme) {
+  const f = theme.fonts || {}, r = theme.radius || {};
+  const extra = [];
+  for (const [k, v] of [['--display', f.display], ['--body', f.body], ['--mono', f.mono]]) if (v && FONT.test(v)) extra.push(`${k}:${v}`);
+  for (const [k, v] of [['--r-card', r.card], ['--r-btn', r.button], ['--r-input', r.input]]) if (Number.isInteger(v)) extra.push(`${k}:${v}px`);
+  $('theme').textContent = `:root{${tokens(theme.light)};${extra.join(';')}}
+@media (prefers-color-scheme:dark){:root{${tokens(theme.dark)}}}`;
+  if (f.stylesheet && /^https:\/\/fonts\.googleapis\.com\//.test(f.stylesheet)) {
+    document.head.append(h('link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }), h('link', { rel: 'stylesheet', href: f.stylesheet }));
+  }
+}
+
+// ---- helpers --------------------------------------------------------------------------------------------------
+const stateOf = (id) => S.cfg.states.find((s) => s.id === id) || { id, label: id || 'unknown', color: '#6B7A86' };
+const pill = (id) => { const s = stateOf(id); return h('span', { class: 'pill', style: { color: HEX.test(s.color || '') ? s.color : 'var(--muted)' } }, h('i'), h('span', { style: { color: 'var(--text)' } }, s.label)); };
+const ago = (iso) => {
+  const t = Date.parse(iso); if (!t) return '';
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return 'just now'; if (s < 3600) return `${Math.floor(s / 60)} min ago`; if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return new Date(t).toLocaleDateString();
+};
+const clock = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
+const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
+const money = (n) => (typeof n === 'number' ? `$${n.toFixed(2)}` : '–');
+const bytes = (n) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} kB` : `${(n / 1048576).toFixed(1)} MB`);
+const isDone = (st) => !!stateOf(st).done;
+const stale = (s) => !isDone(s.state) && s.state === 'working' && Date.now() - Date.parse(s.updated) > STALE_MS;
+function linkFor(kind, value) {
+  const tpl = S.cfg.links?.[kind];
+  if (!tpl || !/^https?:\/\//.test(tpl) || !Number.isInteger(value)) return undefined;
+  return tpl.replaceAll(kind === 'pr' ? '{pr}' : '{n}', String(value));
+}
+function ring(run, big) {
+  const max = S.cfg.maxRuns || 1, r = Number.isInteger(run) ? run : 0;
+  return h('div', { class: big ? 'ring lg' : 'ring', style: { '--p': String(Math.min(1, r / max)) }, title: `run ${r} of ${max}` }, h('span', {}, `${r}/${max}`));
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2000); }
+async function copy(text, what) { try { await navigator.clipboard.writeText(text); toast(`Copied ${what}`); } catch { toast('Copy failed'); } }
+
+// ---- routing: #/43, #/43/logs, #/43/logs/<file> ------------------------------------------------------------------
+function route() {
+  const m = /^#\/(\d+)(?:\/(timeline|logs|reviews)(?:\/([\w.-]+))?)?$/.exec(location.hash);
+  return m ? { n: Number(m[1]), tab: m[2] || 'timeline', file: m[3] } : { n: undefined };
+}
+function go(n, tab, file) { location.hash = n === undefined ? '' : `#/${n}${tab ? `/${tab}` : ''}${file ? `/${file}` : ''}`; }
+
+// ---- rail ---------------------------------------------------------------------------------------------------------
+function renderRail() {
+  const rail = $('rail'), r = route();
+  const counts = {}; for (const s of S.issues) counts[s.state] = (counts[s.state] || 0) + 1;
+  const today = new Date().toDateString();
+  const mergedToday = S.issues.filter((s) => isDone(s.state) && new Date(s.updated).toDateString() === today).length;
+  const tiles = [['working', 'Working', counts.working || 0], ['needs-you', 'Needs you', counts['needs-you'] || 0],
+    ['blocked', 'Blocked', counts.blocked || 0], ['done', 'Done today', mergedToday]];
+  const L = S.loop;
+  const strip = h('div', { class: 'card strip' },
+    h('span', { class: L?.running ? 'dot on' : 'dot', 'aria-hidden': 'true' }),
+    h('div', { class: 'what' },
+      h('b', {}, L?.running ? 'Loop running' : 'Loop idle'), ' ',
+      h('span', { class: 'muted' }, L?.running ? `since ${clock(L.started)}` : L?.ended ? `last exit ${L.code} at ${clock(L.ended)}` : 'not started')),
+    h('span', { class: 'spacer' }),
+    h('button', { class: 'linkbtn', onclick: () => { S.open = S.open === 'loop' ? null : 'loop'; render(); } }, S.open === 'loop' ? 'Hide log' : 'Loop log'));
+  const visible = S.issues.filter((s) => S.filter === 'all' || s.state === S.filter)
+    .sort((a, b) => isDone(a.state) - isDone(b.state));
+  const chips = h('div', { class: 'chips', role: 'group', 'aria-label': 'Filter by state' },
+    h('button', { class: 'chip', 'aria-pressed': S.filter === 'all', onclick: () => { S.filter = 'all'; render(); } }, 'All', h('span', { class: 'n' }, S.issues.length)),
+    S.cfg.states.filter((st) => counts[st.id]).map((st) =>
+      h('button', { class: 'chip', 'aria-pressed': S.filter === st.id, onclick: () => { S.filter = st.id; render(); } }, st.label, h('span', { class: 'n' }, counts[st.id]))));
+  const list = visible.length
+    ? h('nav', { class: 'list', 'aria-label': 'Issues' }, visible.map((s) =>
+        h('button', { class: 'item', 'aria-current': r.n === s.issue, onclick: () => go(s.issue) },
+          h('div', { class: 'body' },
+            h('div', { class: 't' }, h('span', { class: 'num' }, `#${s.issue}`), ' ', s.title || '(no title)'),
+            h('div', { class: 'm' }, pill(s.state), s.agent ? h('span', {}, s.agent) : null,
+              Array.isArray(s.bundle) && s.bundle.length > 1 ? h('span', { class: 'badge' }, `bundle of ${s.bundle.length}`) : null,
+              stale(s) ? h('span', { class: 'badge stale' }, 'stale') : null,
+              s.invalid ? h('span', { class: 'badge stale' }, 'invalid file') : null)),
+          ring(s.run))))
+    : h('div', { class: 'empty' }, h('b', {}, S.issues.length ? 'Nothing in this state' : 'No issues yet'),
+        h('span', { class: 'muted' }, S.issues.length ? 'Pick another filter.' : 'Start the loop with ', S.issues.length ? null : h('code', {}, 'loop-status run'), S.issues.length ? null : '.'));
+  fill(rail, 
+    h('div', { class: 'row' }, h('h1', {}, S.cfg.name), h('span', { class: 'spacer' }), h('span', { class: 'label' }, 'Build loop')),
+    S.error ? h('div', { class: 'err-banner', role: 'alert' }, S.error) : null,
+    strip,
+    S.open === 'loop' ? viewer({ name: 'loop.log', kind: 'text', text: L?.log || '(empty)' }, false) : null,
+    h('div', { class: 'tiles' }, tiles.map(([id, label, n], i) =>
+      h('div', { class: i === 0 ? 'tile first' : 'tile' }, h('div', { class: 'big' }, n), h('div', { class: 'label' }, label)))),
+    chips, list);
+}
+
+// ---- issue page ---------------------------------------------------------------------------------------------------
+function viewer(log, canAll) {
+  const meta = log.kind === 'claude-json'
+    ? [h('span', { class: log.ok ? 'ok' : 'bad' }, log.ok ? '● success' : `● ${log.subtype || 'error'}`),
+       h('span', {}, `${log.turns ?? '–'} turns`), h('span', {}, money(log.cost)),
+       log.durationMs ? h('span', {}, `${Math.round(log.durationMs / 60000)} min`) : null]
+    : [h('span', { class: 'muted' }, log.truncated ? `last ${log.shownLines} of ${log.totalLines} lines` : `${log.shownLines ?? ''} lines`)];
+  return h('div', { class: 'viewer' },
+    h('div', { class: 'bar' }, h('b', {}, log.name), ...meta, h('span', { class: 'spacer' }),
+      canAll && log.kind === 'text' && log.truncated ? h('button', { class: 'btn', onclick: () => { S.showAll = true; refreshLog(); } }, 'Show all') : null,
+      h('button', { class: 'btn', onclick: () => copy(log.text || '', log.name) }, 'Copy')),
+    h('pre', { tabindex: '0' }, log.text || '(empty)'));
+}
+
+function renderMain() {
+  const main = $('main'), r = route();
+  $('app').classList.toggle('detail', r.n !== undefined);
+  if (r.n === undefined || !S.detail || S.detail.status.issue !== r.n) {
+    fill(main, r.n === undefined
+      ? h('div', { class: 'empty', style: { 'margin-top': '0' } }, h('b', {}, 'Pick an issue'), h('span', { class: 'muted' }, 'Its timeline, agent runs and build logs show here.'))
+      : h('div', { class: 'empty' }, h('b', {}, `Loading #${r.n}…`)));
+    return;
+  }
+  const { status: s, logs } = S.detail;
+  const prUrl = linkFor('pr', s.pr), issueUrl = linkFor('issue', s.issue);
+  const fact = (label, ...v) => h('div', {}, h('span', { class: 'label' }, label), h('span', { class: 'v' }, ...v));
+  const reviews = logs.find((l) => l.name === 'reviews.md');
+  const tabs = [['timeline', 'Timeline', (s.history || []).length], ['logs', 'Logs', logs.length]];
+  if (reviews) tabs.push(['reviews', 'Reviews', null]);
+  const tab = tabs.some(([id]) => id === r.tab) ? r.tab : 'timeline';
+  let body;
+  if (tab === 'timeline') {
+    const hist = [...(s.history || [])].reverse();
+    body = hist.length ? h('ol', { class: 'tl' }, hist.map((e) => h('li', {},
+      h('div', { class: 'when' }, clock(e.at), h('br'), day(e.at)),
+      h('div', {}, h('div', { class: 'row' }, e.step ? h('b', {}, e.step) : null, e.state ? pill(e.state) : null),
+        e.message ? h('div', { class: 'msg' }, e.message) : null))))
+      : h('div', { class: 'empty' }, h('b', {}, 'No steps yet'), h('span', { class: 'muted' }, 'The loop adds one each time the step or state changes.'));
+  } else if (tab === 'logs') {
+    body = logs.length ? h('div', {}, logs.map((l) => {
+      const open = r.file === l.name;
+      return [h('button', { class: 'logrow', 'aria-expanded': open, onclick: () => { S.showAll = false; go(s.issue, 'logs', open ? undefined : l.name); } },
+        h('span', { class: 'ln' }, l.name),
+        h('span', { class: 'muted hide-sm' }, l.kind === 'claude-json' ? `${l.turns ?? '–'} turns · ${money(l.cost)}` : bytes(l.size)),
+        h('span', { class: 'muted hide-sm' }, `${day(l.mtime)} ${clock(l.mtime)}`),
+        l.kind === 'claude-json' ? h('span', { class: l.ok ? 'ok' : 'bad', title: l.subtype || '' }, l.ok ? '●' : '●') : h('span', { class: 'muted' }, 'log')),
+      open ? (S.log && S.log.name === l.name ? viewer(S.log, true) : h('div', { class: 'viewer' }, h('pre', {}, 'Loading…'))) : null];
+    })) : h('div', { class: 'empty' }, h('b', {}, 'No logs yet'), h('span', { class: 'muted' }, s.logs ? `Nothing in ${s.logs}/ for this issue.` : 'This status file has no logs folder set.'));
+  } else {
+    body = S.log && S.log.name === 'reviews.md' ? viewer(S.log, true) : h('div', { class: 'viewer' }, h('pre', {}, 'Loading…'));
+  }
+  const note = s.message && ['needs-you', 'blocked'].includes(s.state)
+    ? h('div', { class: s.state === 'blocked' ? 'note err' : 'note' }, h('div', { class: 'label', style: { 'margin-bottom': '4px' } }, stateOf(s.state).label), s.message) : null;
+  fill(main, h('div', { class: 'stack' },
+    h('button', { class: 'linkbtn back', onclick: () => go(undefined) }, '← All issues'),
+    h('section', { class: 'card stack' },
+      h('div', { class: 'head' },
+        h('div', { class: 'who' },
+          h('div', { class: 'row' }, h('span', { class: 'big num', style: { 'font-size': '22px' } }, `#${s.issue}`), pill(s.state),
+            stale(s) ? h('span', { class: 'badge stale' }, 'no update for 30 min') : null,
+            issueUrl ? h('a', { href: issueUrl, target: '_blank', rel: 'noopener noreferrer', style: { 'font-size': '13px', 'font-weight': '700' } }, 'Issue ↗') : null),
+          h('h1', { style: { 'margin-top': '6px' } }, s.title || '(no title)'),
+          s.step ? h('div', { class: 'muted', style: { 'margin-top': '4px' } }, `Now: ${s.step}`) : null),
+        ring(s.run, true)),
+      h('div', { class: 'facts' },
+        s.agent ? fact('Agent', s.agent) : null,
+        s.branch ? fact('Branch', h('code', {}, s.branch), ' ', h('button', { class: 'linkbtn', onclick: () => copy(s.branch, 'branch') }, 'Copy')) : null,
+        Number.isInteger(s.pr) ? fact('PR', prUrl ? h('a', { href: prUrl, target: '_blank', rel: 'noopener noreferrer' }, `#${s.pr} ↗`) : `#${s.pr}`) : null,
+        fact('Cost', money(s.cost)), fact('Turns', s.turns ?? '–'),
+        fact('Updated', ago(s.updated)), fact('Started', `${day(s.started)} ${clock(s.started)}`)),
+      Array.isArray(s.bundle) && s.bundle.length > 1 ? h('div', { class: 'row' }, h('span', { class: 'label' }, 'Bundle'),
+        s.bundle.map((n) => h('button', { class: 'chip', 'aria-pressed': n === s.issue, onclick: () => go(n) }, `#${n}`))) : null,
+      note,
+      s.invalid ? h('div', { class: 'note err' }, `Status file does not match the schema: ${s.invalid.join('; ')}`) : null),
+    h('section', { class: 'card' },
+      h('div', { class: 'tabs', role: 'tablist' }, tabs.map(([id, label, n]) =>
+        h('button', { class: 'tab', role: 'tab', 'aria-selected': id === tab, onclick: () => go(s.issue, id) }, label, n !== null ? h('span', { class: 'n' }, n) : null))),
+      h('div', { style: { 'padding-top': '8px' } }, body))));
+}
+
+function render() { renderRail(); renderMain(); }
+
+// ---- data ---------------------------------------------------------------------------------------------------------
+async function refreshLog() {
+  const r = route();
+  if (!S.detail || r.n !== S.detail.status.issue) return;
+  const file = r.tab === 'reviews' ? 'reviews.md' : r.tab === 'logs' ? r.file : undefined;
+  if (!file || !S.detail.status.logs) { S.log = null; return; }
+  try {
+    S.log = await get(`/api/logs/${encodeURIComponent(S.detail.status.logs)}/${encodeURIComponent(file)}${S.showAll ? '?all=1' : ''}`);
+  } catch { S.log = { name: file, kind: 'text', text: 'This log is gone or cannot be read.' }; }
+  renderMain();
+}
+
+async function tick() {
+  try {
+    const [issues, loop] = await Promise.all([get('/api/issues'), get('/api/loop')]);
+    S.issues = issues; S.loop = loop; S.error = '';
+    const r = route();
+    if (r.n !== undefined) {
+      try { S.detail = await get(`/api/issues/${r.n}`); } catch (e) { S.detail = null; if (e.status === 404) S.error = `No status for #${r.n}.`; }
+    } else S.detail = null;
+  } catch { S.error = 'Cannot reach the loop-status server. Is it still running?'; }
+  render();
+  const r = route();
+  if (S.detail && (r.file || r.tab === 'reviews') && (!S.log || S.detail.status.state === 'working')) await refreshLog();
+}
+
+window.addEventListener('hashchange', () => { S.log = null; tick(); });
+(async () => {
+  try { S.cfg = await get('/api/config'); } catch { document.body.textContent = 'Cannot reach the loop-status server.'; return; }
+  document.title = `${S.cfg.name} · build loop`;
+  applyTheme(S.cfg.theme || {});
+  await tick();
+  setInterval(() => { if (!document.hidden) tick(); }, POLL_MS);
+})();
+</script>
+</body>
+</html>

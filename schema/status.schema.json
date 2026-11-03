@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MellowStar/loop-status/schema/status.schema.json",
+  "title": "loop-status issue status",
+  "description": "One file per issue at <statusDir>/<issue>.json. The build loop writes it; the status page only reads it. Every field except issue, state and updated is optional.",
+  "type": "object",
+  "required": ["issue", "state", "updated"],
+  "properties": {
+    "issue": { "type": "integer", "minimum": 1, "description": "Issue number; matches the file name." },
+    "title": { "type": "string" },
+    "agent": { "type": "string", "description": "Agent working the issue, e.g. slice-owner." },
+    "branch": { "type": "string" },
+    "worktree": { "type": "string" },
+    "pr": { "type": "integer", "minimum": 1 },
+    "logs": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "description": "Folder under logsDir holding this issue's logs, e.g. issue-43 or bundle-43-46."
+    },
+    "bundle": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "description": "All issues worked together on one branch, this one included."
+    },
+    "step": { "type": "string", "description": "What is happening now, in a few words." },
+    "run": { "type": "integer", "minimum": 0, "description": "Build run number for this issue." },
+    "state": { "type": "string", "description": "One of the config's states (default: queued, working, in-review, needs-you, blocked, merged)." },
+    "message": { "type": "string", "description": "Why it stopped, the last verdict, or other detail for the owner." },
+    "cost": { "type": "number", "minimum": 0, "description": "Total agent cost in USD so far." },
+    "turns": { "type": "integer", "minimum": 0, "description": "Total agent turns so far." },
+    "started": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" },
+    "history": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["at"],
+        "properties": {
+          "at": { "type": "string", "format": "date-time" },
+          "step": { "type": "string" },
+          "state": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
